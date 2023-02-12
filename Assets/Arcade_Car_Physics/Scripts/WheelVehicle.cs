@@ -4,6 +4,7 @@
  * This is distributed under the MIT Licence (see LICENSE.md for details)
  */
 
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -11,29 +12,28 @@ using UnityEngine;
     using MOSC;
 #endif
 
-[assembly: InternalsVisibleTo("VehicleBehaviour.Dots")]
+#if TouchInput
+    using TouchInput;
+#endif
+
 namespace VehicleBehaviour {
     [RequireComponent(typeof(Rigidbody))]
     public class WheelVehicle : MonoBehaviour {
         
         [Header("Inputs")]
-    #if MULTIOSCONTROLS
+#if MULTIOSCONTROLS
         [SerializeField] PlayerNumber playerId;
-    #endif
+#endif
         // If isPlayer is false inputs are ignored
         [SerializeField] bool isPlayer = true;
         public bool IsPlayer { get => isPlayer;
             set => isPlayer = value;
-        } 
+        }
 
         // Input names to read using GetAxis
-        [SerializeField] internal VehicleInputs m_Inputs;
-        string throttleInput => m_Inputs.ThrottleInput;
-        string brakeInput => m_Inputs.BrakeInput;
-        string turnInput => m_Inputs.TurnInput;
-        string jumpInput => m_Inputs.JumpInput;
-        string driftInput => m_Inputs.DriftInput;
-	    string boostInput => m_Inputs.BoostInput;
+        TouchInputManager touchInputManager;
+        string throttleInput = "Vertical";
+        string turnInput = "Horizontal";
         
         /* 
          *  Turn input curve: x real input, y value used
@@ -242,6 +242,8 @@ namespace VehicleBehaviour {
             {
                 wheel.motorTorque = 0.0001f;
             }
+
+            touchInputManager = FindObjectOfType<TouchInputManager>();
         }
 
         // Visual feedbacks and boost regen
@@ -270,16 +272,10 @@ namespace VehicleBehaviour {
                 // Accelerate & brake
                 if (throttleInput != "" && throttleInput != null)
                 {
-                    throttle = GetInput(throttleInput) - GetInput(brakeInput);
+                    throttle = GetInput(throttleInput);
                 }
-                // Boost
-                boosting = (GetInput(boostInput) > 0.5f);
                 // Turn
                 steering = turnInputCurve.Evaluate(GetInput(turnInput)) * steerAngle;
-                // Dirft
-                drift = GetInput(driftInput) > 0 && rb.velocity.sqrMagnitude > 100;
-                // Jump
-                jumping = GetInput(jumpInput) != 0;
             }
 
             // Direction
@@ -398,8 +394,13 @@ namespace VehicleBehaviour {
 #if MULTIOSCONTROLS
         return MultiOSControls.GetValue(input, playerId);
 #else
-        return Input.GetAxis(input);
+            if(touchInputManager)
+            {
+                return Input.GetAxis(input) + touchInputManager.GetAxis(input);
+            }
+            return Input.GetAxis(input);
 #endif
         }
+
     }
 }
