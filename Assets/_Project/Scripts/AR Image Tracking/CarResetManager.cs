@@ -12,6 +12,7 @@ public class CarResetManager : MonoBehaviour
         WheelVehicle[] vehicles = FindObjectsOfType<WheelVehicle>();
         foreach(WheelVehicle vehicle in vehicles)
         {
+            vehicle.ResetPos();
             vehicle.transform.localPosition = Vector3.zero;
         }
     }

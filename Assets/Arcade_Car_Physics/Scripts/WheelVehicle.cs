@@ -165,10 +165,6 @@ namespace VehicleBehaviour {
         [SerializeField] float speed = 0.0f;
         public float Speed => speed;
 
-        [Header("Particles")]
-        // Exhaust fumes
-        [SerializeField] ParticleSystem[] gasParticles = new ParticleSystem[0];
-
         [Header("Boost")]
         // Disable boost
         [HideInInspector] public bool allowBoost = true;
@@ -205,11 +201,6 @@ namespace VehicleBehaviour {
         public bool boosting = false;
         // Use this to jump when IsPlayer is set to false
         public bool jumping = false;
-
-        // Boost particles and sound
-        [SerializeField] ParticleSystem[] boostParticles = new ParticleSystem[0];
-        [SerializeField] AudioClip boostClip = default;
-        [SerializeField] AudioSource boostSource = default;
         
         // Private variables set at the start
         Rigidbody rb = default;
@@ -220,9 +211,6 @@ namespace VehicleBehaviour {
 #if MULTIOSCONTROLS
             Debug.Log("[ACP] Using MultiOSControls");
 #endif
-            if (boostClip != null) {
-                boostSource.clip = boostClip;
-            }
 
 		    boost = maxBoost;
 
@@ -249,12 +237,6 @@ namespace VehicleBehaviour {
         // Visual feedbacks and boost regen
         void Update()
         {
-            foreach (ParticleSystem gasParticle in gasParticles)
-            {
-                gasParticle.Play();
-                ParticleSystem.EmissionModule em = gasParticle.emission;
-                em.rateOverTime = handbrake ? 0 : Mathf.Lerp(em.rateOverTime.constant, Mathf.Clamp(150.0f * throttle, 30.0f, 100.0f), 0.1f);
-            }
 
             if (isPlayer && allowBoost) {
                 boost += Time.deltaTime * boostRegen;
@@ -321,34 +303,6 @@ namespace VehicleBehaviour {
                     return;
                 
                 rb.velocity += transform.up * jumpVel;
-            }
-
-            // Boost
-            if (boosting && allowBoost && boost > 0.1f) {
-                rb.AddForce(transform.forward * boostForce);
-
-                boost -= Time.fixedDeltaTime;
-                if (boost < 0f) { boost = 0f; }
-
-                if (boostParticles.Length > 0 && !boostParticles[0].isPlaying) {
-                    foreach (ParticleSystem boostParticle in boostParticles) {
-                        boostParticle.Play();
-                    }
-                }
-
-                if (boostSource != null && !boostSource.isPlaying) {
-                    boostSource.Play();
-                }
-            } else {
-                if (boostParticles.Length > 0 && boostParticles[0].isPlaying) {
-                    foreach (ParticleSystem boostParticle in boostParticles) {
-                        boostParticle.Stop();
-                    }
-                }
-
-                if (boostSource != null && boostSource.isPlaying) {
-                    boostSource.Stop();
-                }
             }
 
             // Drift
