@@ -33,26 +33,6 @@ namespace VehicleBehaviour {
         }
         
         void Update () {
-            if (vehicle.Handbrake && source.clip == rolling)
-            {
-                source.clip = stopping;
-                source.Play();
-            }
-
-            if (!vehicle.Handbrake && (source.clip == stopping || source.clip == null))
-            {
-                source.clip = starting;
-                source.Play();
-
-                source.pitch = 1;
-            }
-
-            if (!vehicle.Handbrake && !source.isPlaying)
-            {
-                source.clip = rolling;
-                source.Play();
-            }
-
             if (source.clip == rolling)
             {
                 source.pitch = Mathf.Lerp(source.pitch, minPitch + Mathf.Abs(vehicle.Speed) / flatoutSpeed, pitchSpeed);

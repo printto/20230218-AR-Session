@@ -11,7 +11,6 @@ using UnityEngine;
     using MOSC;
 #endif
 
-[assembly: InternalsVisibleTo("VehicleBehaviour.Dots")]
 namespace VehicleBehaviour {
     [RequireComponent(typeof(Rigidbody))]
     public class WheelVehicle : MonoBehaviour {
@@ -27,13 +26,8 @@ namespace VehicleBehaviour {
         } 
 
         // Input names to read using GetAxis
-        [SerializeField] internal VehicleInputs m_Inputs;
-        string throttleInput => m_Inputs.ThrottleInput;
-        string brakeInput => m_Inputs.BrakeInput;
-        string turnInput => m_Inputs.TurnInput;
-        string jumpInput => m_Inputs.JumpInput;
-        string driftInput => m_Inputs.DriftInput;
-	    string boostInput => m_Inputs.BoostInput;
+        string throttleInput = "Vertical";
+        string turnInput = "Horizontal";
         
         /* 
          *  Turn input curve: x real input, y value used
@@ -81,12 +75,6 @@ namespace VehicleBehaviour {
             set => diffGearing = value;
         }
 
-        // Basicaly how hard it brakes
-        [SerializeField] float brakeForce = 1500.0f;
-        public float BrakeForce { get => brakeForce;
-            set => brakeForce = value;
-        }
-
         // Max steering hangle, usualy higher for drift car
         [Range(0f, 50.0f)]
         [SerializeField] float steerAngle = 30.0f;
@@ -99,13 +87,6 @@ namespace VehicleBehaviour {
         [SerializeField] float steerSpeed = 0.2f;
         public float SteerSpeed { get => steerSpeed;
             set => steerSpeed = Mathf.Clamp(value, 0.001f, 1.0f);
-        }
-
-        // How hight do you want to jump?
-        [Range(1f, 1.5f)]
-        [SerializeField] float jumpVel = 1.3f;
-        public float JumpVel { get => jumpVel;
-            set => jumpVel = Mathf.Clamp(value, 1.0f, 1.5f);
         }
 
         // How hard do you want to drift?
@@ -146,13 +127,7 @@ namespace VehicleBehaviour {
         float throttle;
         public float Throttle { get => throttle;
             set => throttle = Mathf.Clamp(value, -1f, 1f);
-        } 
-
-        // Like your own car handbrake, if it's true the car will not move
-        [SerializeField] bool handbrake;
-        public bool Handbrake { get => handbrake;
-            set => handbrake = value;
-        } 
+        }
         
         // Use this to disable drifting
         [HideInInspector] public bool allowDrift = true;
@@ -164,52 +139,6 @@ namespace VehicleBehaviour {
         // Use this to read the current car speed (you'll need this to make a speedometer)
         [SerializeField] float speed = 0.0f;
         public float Speed => speed;
-
-        [Header("Particles")]
-        // Exhaust fumes
-        [SerializeField] ParticleSystem[] gasParticles = new ParticleSystem[0];
-
-        [Header("Boost")]
-        // Disable boost
-        [HideInInspector] public bool allowBoost = true;
-
-        // Maximum boost available
-        [SerializeField] float maxBoost = 10f;
-        public float MaxBoost { get => maxBoost;
-            set => maxBoost = value;
-        }
-
-        // Current boost available
-        [SerializeField] float boost = 10f;
-        public float Boost { get => boost;
-            set => boost = Mathf.Clamp(value, 0f, maxBoost);
-        }
-
-        // Regen boostRegen per second until it's back to maxBoost
-        [Range(0f, 1f)]
-        [SerializeField] float boostRegen = 0.2f;
-        public float BoostRegen { get => boostRegen;
-            set => boostRegen = Mathf.Clamp01(value);
-        }
-
-        /*
-         *  The force applied to the car when boosting
-         *  NOTE: the boost does not care if the car is grounded or not
-         */
-        [SerializeField] float boostForce = 5000;
-        public float BoostForce { get => boostForce;
-            set => boostForce = value;
-        }
-
-        // Use this to boost when IsPlayer is set to false
-        public bool boosting = false;
-        // Use this to jump when IsPlayer is set to false
-        public bool jumping = false;
-
-        // Boost particles and sound
-        [SerializeField] ParticleSystem[] boostParticles = new ParticleSystem[0];
-        [SerializeField] AudioClip boostClip = default;
-        [SerializeField] AudioSource boostSource = default;
         
         // Private variables set at the start
         Rigidbody rb = default;
@@ -220,11 +149,6 @@ namespace VehicleBehaviour {
 #if MULTIOSCONTROLS
             Debug.Log("[ACP] Using MultiOSControls");
 #endif
-            if (boostClip != null) {
-                boostSource.clip = boostClip;
-            }
-
-		    boost = maxBoost;
 
             rb = GetComponent<Rigidbody>();
             spawnPosition = transform.position;
@@ -243,22 +167,6 @@ namespace VehicleBehaviour {
                 wheel.motorTorque = 0.0001f;
             }
         }
-
-        // Visual feedbacks and boost regen
-        void Update()
-        {
-            foreach (ParticleSystem gasParticle in gasParticles)
-            {
-                gasParticle.Play();
-                ParticleSystem.EmissionModule em = gasParticle.emission;
-                em.rateOverTime = handbrake ? 0 : Mathf.Lerp(em.rateOverTime.constant, Mathf.Clamp(150.0f * throttle, 30.0f, 100.0f), 0.1f);
-            }
-
-            if (isPlayer && allowBoost) {
-                boost += Time.deltaTime * boostRegen;
-                if (boost > maxBoost) { boost = maxBoost; }
-            }
-        }
         
         // Update everything
         void FixedUpdate () {
@@ -270,16 +178,10 @@ namespace VehicleBehaviour {
                 // Accelerate & brake
                 if (throttleInput != "" && throttleInput != null)
                 {
-                    throttle = GetInput(throttleInput) - GetInput(brakeInput);
+                    throttle = GetInput(throttleInput);
                 }
-                // Boost
-                boosting = (GetInput(boostInput) > 0.5f);
                 // Turn
                 steering = turnInputCurve.Evaluate(GetInput(turnInput)) * steerAngle;
-                // Dirft
-                drift = GetInput(driftInput) > 0 && rb.velocity.sqrMagnitude > 100;
-                // Jump
-                jumping = GetInput(jumpInput) != 0;
             }
 
             // Direction
@@ -294,17 +196,7 @@ namespace VehicleBehaviour {
                 wheel.brakeTorque = 0;
             }
 
-            // Handbrake
-            if (handbrake)
-            {
-                foreach (WheelCollider wheel in wheels)
-                {
-                    // Don't zero out this value or the wheel completly lock up
-                    wheel.motorTorque = 0.0001f;
-                    wheel.brakeTorque = brakeForce;
-                }
-            }
-            else if (throttle != 0 && (Mathf.Abs(speed) < 4 || Mathf.Sign(speed) == Mathf.Sign(throttle)))
+            if (throttle != 0 && (Mathf.Abs(speed) < 4 || Mathf.Sign(speed) == Mathf.Sign(throttle)))
             {
                 foreach (WheelCollider wheel in driveWheel)
                 {
@@ -315,43 +207,7 @@ namespace VehicleBehaviour {
             {
                 foreach (WheelCollider wheel in wheels)
                 {
-                    wheel.brakeTorque = Mathf.Abs(throttle) * brakeForce;
-                }
-            }
-
-            // Jump
-            if (jumping && isPlayer) {
-                if (!IsGrounded)
-                    return;
-                
-                rb.velocity += transform.up * jumpVel;
-            }
-
-            // Boost
-            if (boosting && allowBoost && boost > 0.1f) {
-                rb.AddForce(transform.forward * boostForce);
-
-                boost -= Time.fixedDeltaTime;
-                if (boost < 0f) { boost = 0f; }
-
-                if (boostParticles.Length > 0 && !boostParticles[0].isPlaying) {
-                    foreach (ParticleSystem boostParticle in boostParticles) {
-                        boostParticle.Play();
-                    }
-                }
-
-                if (boostSource != null && !boostSource.isPlaying) {
-                    boostSource.Play();
-                }
-            } else {
-                if (boostParticles.Length > 0 && boostParticles[0].isPlaying) {
-                    foreach (ParticleSystem boostParticle in boostParticles) {
-                        boostParticle.Stop();
-                    }
-                }
-
-                if (boostSource != null && boostSource.isPlaying) {
-                    boostSource.Stop();
+                    wheel.brakeTorque = Mathf.Abs(throttle);
                 }
             }
 
@@ -381,11 +237,6 @@ namespace VehicleBehaviour {
 
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-        }
-
-        public void ToogleHandbrake(bool h)
-        {
-            handbrake = h;
         }
 
         // MULTIOSCONTROLS is another package I'm working on ignore it I don't know if it will get a release.

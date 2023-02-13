@@ -55,7 +55,6 @@ namespace VehicleBehaviour.Utils {
 				if (v != null)
 				{
 					v.IsPlayer = false;
-					v.Handbrake = true;
 				}
 			}
 
@@ -65,7 +64,6 @@ namespace VehicleBehaviour.Utils {
 			if (vehicle != null)
 			{
 				vehicle.IsPlayer = true;
-				vehicle.Handbrake = false;
 			}
 		}
 
