@@ -6,6 +6,7 @@
 
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 #if MULTIOSCONTROLS
     using MOSC;
@@ -23,9 +24,10 @@ namespace VehicleBehaviour {
         [SerializeField] bool isPlayer = true;
         public bool IsPlayer { get => isPlayer;
             set => isPlayer = value;
-        } 
+        }
 
         // Input names to read using GetAxis
+        CarControls carControls;
         string throttleInput = "Vertical";
         string turnInput = "Horizontal";
         
@@ -144,6 +146,11 @@ namespace VehicleBehaviour {
         Rigidbody rb = default;
         internal WheelCollider[] wheels = new WheelCollider[0];
 
+        private void Awake()
+        {
+            carControls = new CarControls();
+        }
+
         // Init rigidbody, center of mass, wheels and more
         void Start() {
 #if MULTIOSCONTROLS
@@ -178,10 +185,10 @@ namespace VehicleBehaviour {
                 // Accelerate & brake
                 if (throttleInput != "" && throttleInput != null)
                 {
-                    throttle = GetInput(throttleInput);
+                    throttle = carControls.CarInput.Axis.ReadValue<Vector2>().y;
                 }
                 // Turn
-                steering = turnInputCurve.Evaluate(GetInput(turnInput)) * steerAngle;
+                steering = turnInputCurve.Evaluate(carControls.CarInput.Axis.ReadValue<Vector2>().x) * steerAngle;
             }
 
             // Direction
@@ -244,13 +251,14 @@ namespace VehicleBehaviour {
         private static MultiOSControls _controls;
 #endif
 
-        // Use this method if you want to use your own input manager
-        private float GetInput(string input) {
-#if MULTIOSCONTROLS
-        return MultiOSControls.GetValue(input, playerId);
-#else
-        return Input.GetAxis(input);
-#endif
+        private void OnEnable()
+        {
+            carControls.Enable();
+        }
+
+        private void OnDisable()
+        {
+            carControls.Disable();
         }
     }
 }
